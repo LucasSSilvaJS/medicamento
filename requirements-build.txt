@@ -1,0 +1,2 @@
+# Apenas para gerar o .exe (PyInstaller). Não é necessário para rodar o script.
+pyinstaller>=6.3.0

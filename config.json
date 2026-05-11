@@ -1,0 +1,13 @@
+{
+  "check_interval_seconds": 20,
+  "debug_interval_in_minutes": false,
+  "medications": [
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "name": "Exemplo — substitua pelo seu remédio",
+      "first_time": "08:00",
+      "interval_hours": 6,
+      "doses_per_day": 3
+    }
+  ]
+}
