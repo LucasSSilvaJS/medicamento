@@ -59,7 +59,7 @@ flowchart TD
         P --> J
     end
 
-    I -.->|arquivo novo| K
+    I -.->|ficheiro atualizado| K
 
     subgraph bandeja["Ícone"]
         G --> Q[Abrir ou esconder janela]
