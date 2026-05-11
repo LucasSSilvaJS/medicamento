@@ -1,6 +1,6 @@
 # Lembretes de medicamento (Windows)
 
-Aplicação em **Python** com **janela gráfica** para **criar, listar, editar e excluir** medicamentos. Calcula automaticamente os horários do dia a partir da **primeira toma**, do **intervalo em horas** e da **quantidade de doses por dia**, e envia **notificações nativas do Windows**. Pode ficar na **bandeja do sistema** enquanto corre em segundo plano.
+Aplicação em **Python** com **janela gráfica** para **criar, listar, editar e excluir** medicamentos. Calcula automaticamente os horários do dia a partir da **primeira dosagem**, do **intervalo em horas** e da **quantidade de doses por dia**, e envia **notificações nativas do Windows**. Pode ficar na **bandeja do sistema** enquanto corre em segundo plano.
 
 ## Funcionalidades
 
