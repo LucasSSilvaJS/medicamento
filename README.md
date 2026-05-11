@@ -1,58 +1,114 @@
 # Lembretes de medicamento (Windows)
 
-Aplicação em **Python** com **janela gráfica** para **criar, listar, editar e excluir** medicamentos. Calcula automaticamente os horários do dia a partir da **primeira toma**, do **intervalo em horas** e da **quantidade de doses por dia**, e envia **notificações nativas do Windows**. Pode ficar na **bandeja do sistema** enquanto corre em segundo plano.
+Pequena app em Python para não esquecer os remédios. Cadastra-se cada medicamento com o nome, a hora da primeira toma, de quantas em quantas horas repetir e quantas vezes por dia; o programa monta os horários e avisa com a notificação normal do Windows. Dá para deixar a correr quieta perto do relógio, na bandeja.
 
-## Funcionalidades
+O que **não** faz: não lembra de comprar, não confirma dose com receita, não substitui médico ou farmacêutico.
 
-- **Novo / Editar / Excluir** medicamentos na lista.
-- Campos por medicamento: **nome**, **primeira hora do dia (HH:MM)**, **intervalo entre tomas (horas)** — aceita decimais, ex.: `4,5` — e **doses por dia**.
-- Coluna **Horários gerados** mostra os lembretes calculados (ex.: 08:00, 14:00, 20:00).
-- **Fechar a janela** (X) **oculta** para a bandeja; use o ícone → **Abrir** ou o menu **Ficheiro**.
-- Ficheiro **`config.json`** junto ao `.exe` ou ao script (gravado automaticamente ao alterar dados).
-- **Modo debug**: caixa **«Debug: intervalo em minutos»** — o valor de intervalo passa a ser **minutos** entre tomas (em vez de horas), para testar notificações em pouco tempo. O título da janela e o texto do toast indicam modo de teste. Limite do intervalo: **1 a 1440 minutos**. Recomenda-se baixar **«Verificar relógio a cada»** para **5–15 s** durante os testes.
+---
+
+## O que usar no dia a dia
+
+Na janela principal inclui-se, altera-se ou apaga-se itens na lista. Para cada remédio: nome, primeira hora do dia (formato 24 h, tipo `08:30`), intervalo entre uma toma e outra em **horas** (pode ser `4,5`), e quantas doses no dia. A coluna de horários mostra o que vai sair (por exemplo 08:00, 14:00, 20:00).
+
+Fechar a janela pelo X **não encerra** o programa: só esconde. Para voltar, botão direito no ícone azul perto do relógio → Abrir, ou menu Ficheiro. Tudo o que se muda fica no ficheiro `config.json` na mesma pasta do programa (ou do `.exe`).
+
+**Modo debug:** marcar a opção de intervalo em **minutos** para testar rápido, sem esperar horas. O número do intervalo passa a ser minutos; o título da janela e o aviso do Windows indicam que é teste. Convém baixar o “verificar relógio a cada X segundos” para uns 5–15 s nessa altura.
+
+---
+
+## Como a automação funciona (passo a passo)
+
+1. Edita-se a lista e o programa grava o `config.json`.
+2. Ao ler, o programa corrige valores inválidos e, se encontrar formato antigo só com lista de horários (`times`), converte para o modelo novo.
+3. A partir da primeira hora, do intervalo e do número de doses, calculam-se todos os horários do dia (em horas, ou em minutos com o debug ligado).
+4. Em segundo plano, de X em X segundos, volta a ler o `config.json` e compara com o relógio do Windows. Assim, uma alteração na janela aplica-se sem reiniciar.
+5. Se o minuto atual coincide com um lembrete e esse remédio a essa hora **ainda não** avisou hoje, dispara-se a notificação e regista-se para não repetir no mesmo dia.
+6. A janela e o ícone da bandeja convivem com esse ciclo; só “Sair” na bandeja encerra o lembrete de facto.
+
+### Desenho do fluxo
+
+Visão geral em diagrama (no GitHub o desenho aparece sozinho):
+
+```mermaid
+flowchart TD
+    subgraph arranque["Ao abrir"]
+        A[Abrir o programa] --> B{Existe config.json?}
+        B -->|Não| C[Cria um exemplo]
+        B -->|Sim| D[Carrega os dados]
+        C --> D
+        D --> E[Começa o lembrete em segundo plano]
+        D --> F[Mostra a janela]
+        D --> G[Coloca o ícone na bandeja]
+    end
+
+    subgraph utilizador["Na janela"]
+        F --> H[Cadastra ou muda remédios / debug / intervalo de checagem]
+        H --> I[Grava o config.json]
+    end
+
+    subgraph ciclo["Loop do lembrete"]
+        E --> J[Espera alguns segundos]
+        J --> K[Lê o config de novo]
+        K --> L[Recalcula os horários]
+        L --> M{É agora um desses horários?}
+        M -->|Não| J
+        M -->|Sim| N{Já avisou hoje esse remédio nesse horário?}
+        N -->|Sim| J
+        N -->|Não| O[Notificação do Windows]
+        O --> P[Marca como já avisado]
+        P --> J
+    end
+
+    I -.->|arquivo novo| K
+
+    subgraph bandeja["Ícone"]
+        G --> Q[Abrir ou esconder janela]
+        G --> R[Sair e fechar tudo]
+    end
+```
+
+---
 
 ## Requisitos
 
-- **Windows 10 ou 11**
-- **Python 3.10+** (para correr o código-fonte)
+Windows 10 ou 11. Para rodar o código: Python 3.10 ou mais recente.
 
-## Instalação (código-fonte)
+---
+
+## Instalar e correr pelo código
 
 ```powershell
 cd c:\Users\professor\Downloads\medicamento
 python -m pip install -r requirements.txt
-```
-
-**Tkinter** vem com o instalador oficial do Python no Windows; se faltar, no instalador marque *tcl/tk* ou reinstale o Python com componentes completos.
-
-## Como executar (código-fonte)
-
-```powershell
 python medicamento_app.py
 ```
 
-(`medicamento_tray.py` redireciona para a mesma aplicação.)
+O ficheiro `medicamento_tray.py` só chama o mesmo programa.
 
-Para abrir **sem consola**:
+Sem janela preta de consola:
 
 ```powershell
 pythonw medicamento_app.py
 ```
 
-## Formato do `config.json`
+Se faltar a interface gráfica, o instalador do Python no Windows tem de incluir o Tcl/Tk (opção habitual no instalador oficial).
 
-| Campo | Descrição |
-|--------|-----------|
-| `check_interval_seconds` | De quanto em quanto tempo o app consulta o relógio (5–300 s). Pode ajustar na barra da janela. |
-| `debug_interval_in_minutes` | Se `true`, o campo numérico de intervalo de cada medicamento é interpretado em **minutos** (apenas para testes). |
-| `medications` | Lista de medicamentos. |
-| `medications[].id` | Identificador único (gerado pela app). |
-| `medications[].name` | Nome do medicamento. |
+---
+
+## O que vai no `config.json`
+
+| Campo | Para que serve |
+|--------|----------------|
+| `check_interval_seconds` | A cada quantos segundos o programa olha o relógio (entre 5 e 300). Dá para mudar na barra da janela. |
+| `debug_interval_in_minutes` | Se for `true`, o número de intervalo de cada remédio é em **minutos** (só para teste). |
+| `medications` | Lista de remédios. |
+| `medications[].id` | ID interno (o programa gera). |
+| `medications[].name` | Nome que aparece no aviso. |
 | `medications[].first_time` | Primeira toma do dia, `HH:MM`. |
-| `medications[].interval_hours` | Horas entre tomas (modo normal) ou **minutos** se `debug_interval_in_minutes` for `true`. |
-| `medications[].doses_per_day` | Número de lembretes por dia (1–48). |
+| `medications[].interval_hours` | No modo normal = horas entre tomas; com debug ligado = minutos (o nome do campo continua esse no JSON). |
+| `medications[].doses_per_day` | Quantas vezes por dia (1 a 48). |
 
-**Formato antigo** com apenas `"times": ["08:00", ...]` é **lido** e **convertido** automaticamente na primeira leitura (ficheiro é normalizado ao gravar de novo).
+Quem tinha um ficheiro antigo só com `"times": ["08:00", ...]`, à primeira abertura o programa converte e, ao gravar, passa para o formato novo.
 
 Exemplo:
 
@@ -72,62 +128,45 @@ Exemplo:
 }
 ```
 
-Os horários do dia são: `first_time + k × interval_hours` para `k = 0 … doses_per_day - 1` (com mudança de dia à meia-noite quando necessário).
+A conta dos horários é: primeira hora + 0, 1, 2… vezes o intervalo, até completar o número de doses (virando a meia-noite quando precisar).
 
-## Executável (.exe)
+---
 
-Gera **`dist\MedicamentoLembretes.exe`** (sem janela de consola):
+## Gerar o `.exe`
+
+Um único executável sem consola, em `dist\MedicamentoLembretes.exe`:
 
 ```powershell
 .\build_exe.ps1
 ```
 
-Ou:
+Ou à mão:
 
 ```powershell
 python -m pip install -r requirements.txt -r requirements-build.txt
 python -m PyInstaller --clean --noconfirm medicamento_tray.spec
 ```
 
-Coloque **`config.json` na mesma pasta** que o `.exe` (ou deixe a app criar um modelo na primeira execução).
+Manter o `config.json` na **mesma pasta** do `.exe` (ou correr uma vez: ele cria um modelo).
 
-> **Antivírus:** executáveis PyInstaller são por vezes analisados na primeira corrida; é habitual no Windows.
+O antivírus por vezes demora na primeira execução de `.exe` gerados com PyInstaller; é incómodo mas frequente.
 
-## Bandeja do sistema
+---
 
-- **Botão direito** no ícone: **Abrir**, **Ocultar**, **Sair**.
-- **Sair** termina lembretes e fecha a aplicação.
+## Bandeja, notificações, arranque com o Windows
 
-## Notificações
+- Ícone: botão direito → Abrir, Ocultar ou Sair. Sair fecha tudo.
+- Se o aviso não aparecer: Configurações → Sistema → Notificações, e verificar se o programa não está silenciado.
+- Arranque com o Windows: `Win+R`, `shell:startup`, atalho para `MedicamentoLembretes.exe` com o `config.json` na mesma pasta.
 
-Em **Configurações → Sistema → Notificações**, confirme que as notificações estão ativas para a aplicação.
+---
 
-## Iniciar com o Windows
+## Ficheiros e dependências
 
-Crie um atalho em `shell:startup` apontando para **`MedicamentoLembretes.exe`** (e mantenha o `config.json` na mesma pasta).
+O núcleo é o `medicamento_app.py`. O `medicamento_tray.py` é só entrada alternativa. Para o `.exe`: `medicamento_tray.spec` e `build_exe.ps1`. Dependências listadas em `requirements.txt` e `requirements-build.txt`.
 
-## Estrutura do projeto
+Pacotes: [winotify](https://pypi.org/project/winotify/) (toast), [pystray](https://pypi.org/project/pystray/) e [Pillow](https://pypi.org/project/Pillow/) (ícone na bandeja).
 
-```
-medicamento/
-├── medicamento_app.py     # Aplicação principal (GUI + lembretes)
-├── medicamento_tray.py    # Entrada alternativa (chama medicamento_app)
-├── medicamento_tray.spec  # Receita PyInstaller
-├── build_exe.ps1
-├── config.json
-├── requirements.txt
-├── requirements-build.txt
-└── README.md
-```
+---
 
-## Dependências
-
-| Pacote | Função |
-|--------|--------|
-| [winotify](https://pypi.org/project/winotify/) | Toasts do Windows |
-| [pystray](https://pypi.org/project/pystray/) | Ícone na bandeja |
-| [Pillow](https://pypi.org/project/Pillow/) | Ícone da bandeja |
-
-## Aviso
-
-Ferramenta apenas de **lembrete**; não substitui orientação médica ou farmacêutica.
+Isto é só um **alarme**; confirme dose e horário com quem acompanha a sua saúde.
